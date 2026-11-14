@@ -27,6 +27,9 @@ NuGet dependencies: ScottPlot.WPF and System.IO.Ports (both bundled in the build
 
   Every output folder holds `RigolDPRemoteControl.exe` and the `Help` folder. There is no Linux build: the user interface
   is WPF, which only exists on Windows.
+- GitHub Actions (`.github/workflows/build.yml`) runs the same four publish profiles on every push and pull request and offers the
+  zips as build artifacts. A new release: set `<Version>` in the csproj, commit, then `git tag v1.01` and `git push origin v1.01` –
+  the workflow attaches the zips and `SHA256SUMS.txt` to that release.
 
 No instrument at hand? Add a supply with the address `sim` (or `sim-dp831`, `sim-dp711`, `sim-dp932`, `sim-dp2031`, …) to use the built-in simulator.
 

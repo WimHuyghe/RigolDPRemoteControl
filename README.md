@@ -66,6 +66,9 @@ The complete user guide – including a datasheet summary and a comparison of al
 C# / WPF on .NET 10, built with Visual Studio 2026 (or `dotnet build`). See [source/README.md](source/README.md) for the build,
 the four publish profiles and the code layout. NuGet dependencies: ScottPlot.WPF and System.IO.Ports.
 
+The release zips are built automatically from this source by GitHub Actions ([build workflow](.github/workflows/build.yml)):
+every change is built, and pushing a tag such as `v1.01` attaches the four zips and their SHA-256 checksums to the release of that tag.
+
 ## License
 
 [MIT](LICENSE) © 2026 Wim Huyghe

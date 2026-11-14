@@ -1,0 +1,91 @@
+# Builds the four Windows versions of Rigol DP Remote Control from the public source.
+#  - every push / pull request: build + zips as downloadable workflow artifacts (check that it builds)
+#  - a pushed tag "v*" (e.g. v1.01): the same zips are also attached to the GitHub release of that tag
+#  - "Run workflow" button on the Actions page: manual build
+# Code signing can be added later as a step between "Publish" and "Zip".
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+    paths-ignore: ['docs/**', '**/*.md', 'make-docs.ps1']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write   # needed to attach the zips to a release
+
+jobs:
+  build:
+    runs-on: windows-latest
+    env:
+      PROJECT: source/RigolDPRemoteControl/RigolDPRemoteControl.csproj
+      DOTNET_NOLOGO: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Version name for the zips
+        id: ver
+        shell: pwsh
+        run: |
+          if ($env:GITHUB_REF_TYPE -eq 'tag') { $name = $env:GITHUB_REF_NAME }
+          else { $name = 'build-' + $env:GITHUB_SHA.Substring(0, 7) }
+          "name=$name" >> $env:GITHUB_OUTPUT
+          "Zip version name: $name"
+
+      - name: Publish the four versions
+        shell: pwsh
+        run: |
+          foreach ($p in 'SelfContained-win-x64', 'FrameworkDependent-win-x64', 'SelfContained-win-x86', 'FrameworkDependent-win-x86') {
+            Write-Host "::group::$p"
+            dotnet publish $env:PROJECT -p:PublishProfile=$p
+            if ($LASTEXITCODE -ne 0) { throw "publish $p failed" }
+            Write-Host "::endgroup::"
+          }
+
+      # --- code signing of publish/*/RigolDPRemoteControl.exe goes here (see README) ---
+
+      - name: Zip
+        shell: pwsh
+        run: |
+          $name = '${{ steps.ver.outputs.name }}'
+          New-Item -ItemType Directory -Force release | Out-Null
+          foreach ($v in 'win-x64', 'win-x64-runtime', 'win-x86', 'win-x86-runtime') {
+            $src = "publish/$v"
+            Compress-Archive -Path "$src/RigolDPRemoteControl.exe", "$src/LICENSE.txt", "$src/Help" `
+                             -DestinationPath "release/RigolDPRemoteControl-$name-$v.zip" -CompressionLevel Optimal
+          }
+          Get-ChildItem release | ForEach-Object { "{0}  {1:N1} MB" -f $_.Name, ($_.Length / 1MB) }
+          # SHA-256 checksums, so users can verify their download
+          Get-ChildItem release/*.zip | ForEach-Object { "{0}  {1}" -f (Get-FileHash $_ -Algorithm SHA256).Hash.ToLower(), $_.Name } |
+            Set-Content release/SHA256SUMS.txt
+          Get-Content release/SHA256SUMS.txt
+
+      - name: Upload zips as build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: RigolDPRemoteControl-${{ steps.ver.outputs.name }}
+          path: release/
+          retention-days: 30
+
+      - name: Attach zips to the release of this tag
+        if: github.ref_type == 'tag'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = $env:GITHUB_REF_NAME
+          gh release view $tag 2>$null | Out-Null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create $tag --title "Rigol DP Remote Control $tag" --generate-notes --verify-tag
+          }
+          gh release upload $tag release/*.zip release/SHA256SUMS.txt --clobber
