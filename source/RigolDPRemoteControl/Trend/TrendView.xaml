@@ -1,0 +1,188 @@
+﻿<UserControl x:Class="RigolDPRemoteControl.Trend.TrendView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sp="clr-namespace:ScottPlot.WPF;assembly=ScottPlot.WPF"
+             Foreground="{DynamicResource TextPrimary}">
+    <UserControl.Resources>
+        <Style x:Key="AxisBox" TargetType="TextBox">
+            <Setter Property="Width" Value="70"/>
+            <Setter Property="Margin" Value="2,0"/>
+            <Setter Property="HorizontalContentAlignment" Value="Right"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+    </UserControl.Resources>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- ============================================== toolbar (single line; Series toggle on the far right) -->
+        <Border Grid.Row="0" Background="{DynamicResource PanelBackground}" BorderBrush="{DynamicResource CardBorder}" BorderThickness="0,0,0,1"
+                Padding="8,4">
+            <DockPanel>
+                <ToggleButton x:Name="SeriesBtn" DockPanel.Dock="Right" Style="{StaticResource GhostButton}" Tag="&#xE8FD;" Content="Series"
+                              IsChecked="True" VerticalAlignment="Center"
+                              ToolTip="Show / hide the series panel (series selection, trend file open / save as, ruler values, plot layout)"/>
+                <WrapPanel DockPanel.Dock="Left" VerticalAlignment="Center">
+                    <ToggleButton x:Name="FollowBtn" Style="{StaticResource GhostButton}" Tag="&#xE768;" Content="Follow live" Checked="Follow_Click" Unchecked="Follow_Click"
+                                  VerticalAlignment="Center"
+                                  ToolTip="Keep the newest samples in view. Scrolling or zooming with the mouse pauses following – sampling continues."/>
+                    <ToggleButton x:Name="RecordBtn" Style="{StaticResource FlatButton}" Click="RecordBtn_Click" Padding="10,4" Margin="4,0,4,0"
+                                  VerticalAlignment="Center"
+                                  ToolTip="Start / stop trend recording. (Re)starting clears the trend and overwrites the default trend file.">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock x:Name="RecordIcon" Text="&#xE7C8;" FontFamily="{StaticResource IconFont}" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="RecordText" Text="Start" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </ToggleButton>
+                    <Button x:Name="ClearBtn" Style="{StaticResource GhostButton}" Tag="&#xE894;" Content="Clear" Click="Clear_Click" VerticalAlignment="Center"
+                            ToolTip="Clear the trend"/>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="4,0,0,0">
+                        <!-- icon + label in the same style as the "Smoothing" button -->
+                        <TextBlock Text="&#xE823;" FontFamily="{StaticResource IconFont}" FontSize="14" VerticalAlignment="Center" Margin="0,0,5,0"
+                                   Foreground="{DynamicResource TextSecondary}" ToolTip="Visible time span"/>
+                        <TextBlock Text="Window" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="{DynamicResource TextSecondary}"
+                                   FontFamily="{Binding FontFamily, ElementName=SmoothBtn}" FontSize="{Binding FontSize, ElementName=SmoothBtn}"/>
+                        <ComboBox x:Name="WindowCombo" SelectionChanged="WindowCombo_SelectionChanged" VerticalAlignment="Center"
+                                  ToolTip="Visible time span"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="2,0,0,0">
+                        <ToggleButton x:Name="SmoothBtn" Style="{StaticResource GhostButton}" Tag="&#xE9E9;" Content="Smoothing" Checked="Smooth_Click" Unchecked="Smooth_Click"
+                                      ToolTip="Moving-average smoothing of the displayed curves (recorded data stays raw)"/>
+                        <ComboBox x:Name="SmoothCombo" SelectionChanged="SmoothCombo_SelectionChanged" VerticalAlignment="Center"
+                                  ToolTip="Number of samples in the moving average"/>
+                    </StackPanel>
+                </WrapPanel>
+                <!-- name of the trend file being recorded (or the opened file in a history window): takes the remaining space
+                     right of Smoothing and is shortened with "…" when it does not fit (full name in the tooltip) -->
+                <DockPanel VerticalAlignment="Center" Margin="4,0,0,0">
+                    <TextBlock DockPanel.Dock="Left" Text="&#xE8A5;" Style="{StaticResource Icon}" FontSize="14" Margin="0,0,5,0"/>
+                    <TextBlock x:Name="FileText" FontStyle="Italic" FontWeight="Normal" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                </DockPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- ============================================== axis scaling (bottom of the trend) -->
+        <Border Grid.Row="2" Background="{DynamicResource PanelBackground}" BorderBrush="{DynamicResource CardBorder}" BorderThickness="0,1,0,0"
+                Padding="8,4">
+            <WrapPanel>
+                <!-- one group per axis: the unit (V, A, W) identifies the axis; while Auto is ticked the fields are greyed out
+                     and follow the current autoscale range, so unticking Auto keeps the same scale -->
+                <StackPanel Orientation="Horizontal" Margin="0,0,10,0">
+                    <CheckBox x:Name="AutoV" Content="Auto" MinWidth="0" Click="Auto_Click" Tag="V" ToolTip="Autoscale the voltage axis"/>
+                    <StackPanel x:Name="RangeV" Orientation="Horizontal">
+                        <TextBox x:Name="MinV" Style="{StaticResource PlainTextBox}" ToolTipService.ShowOnDisabled="True" Width="74" Padding="4,3" Margin="4,0,0,0" HorizontalContentAlignment="Right" VerticalAlignment="Center" Tag="V" KeyDown="AxisBox_KeyDown" LostFocus="AxisBox_LostFocus" ToolTip="min – minimum of the voltage axis [V]"/>
+                        <TextBox x:Name="MaxV" Style="{StaticResource PlainTextBox}" ToolTipService.ShowOnDisabled="True" Width="74" Padding="4,3" Margin="4,0,0,0" HorizontalContentAlignment="Right" VerticalAlignment="Center" Tag="V" KeyDown="AxisBox_KeyDown" LostFocus="AxisBox_LostFocus" ToolTip="max – maximum of the voltage axis [V]"/>
+                    </StackPanel>
+                    <TextBlock Text="V" FontWeight="Bold" FontSize="14" VerticalAlignment="Center" Margin="5,0,0,0" ToolTip="Voltage axis [V]"/>
+                </StackPanel>
+                <Rectangle Width="1" Fill="{DynamicResource CardBorder}" Margin="0,3,10,3"/>
+                <StackPanel Orientation="Horizontal" Margin="0,0,10,0">
+                    <CheckBox x:Name="AutoI" Content="Auto" MinWidth="0" Click="Auto_Click" Tag="I" ToolTip="Autoscale the current axis"/>
+                    <StackPanel x:Name="RangeI" Orientation="Horizontal">
+                        <TextBox x:Name="MinI" Style="{StaticResource PlainTextBox}" ToolTipService.ShowOnDisabled="True" Width="74" Padding="4,3" Margin="4,0,0,0" HorizontalContentAlignment="Right" VerticalAlignment="Center" Tag="I" KeyDown="AxisBox_KeyDown" LostFocus="AxisBox_LostFocus" ToolTip="min – minimum of the current axis [A]"/>
+                        <TextBox x:Name="MaxI" Style="{StaticResource PlainTextBox}" ToolTipService.ShowOnDisabled="True" Width="74" Padding="4,3" Margin="4,0,0,0" HorizontalContentAlignment="Right" VerticalAlignment="Center" Tag="I" KeyDown="AxisBox_KeyDown" LostFocus="AxisBox_LostFocus" ToolTip="max – maximum of the current axis [A]"/>
+                    </StackPanel>
+                    <TextBlock Text="A" FontWeight="Bold" FontSize="14" VerticalAlignment="Center" Margin="5,0,0,0" ToolTip="Current axis [A]"/>
+                </StackPanel>
+                <Rectangle Width="1" Fill="{DynamicResource CardBorder}" Margin="0,3,10,3"/>
+                <StackPanel Orientation="Horizontal">
+                    <CheckBox x:Name="AutoP" Content="Auto" MinWidth="0" Click="Auto_Click" Tag="P" ToolTip="Autoscale the power axis"/>
+                    <StackPanel x:Name="RangeP" Orientation="Horizontal">
+                        <TextBox x:Name="MinP" Style="{StaticResource PlainTextBox}" ToolTipService.ShowOnDisabled="True" Width="74" Padding="4,3" Margin="4,0,0,0" HorizontalContentAlignment="Right" VerticalAlignment="Center" Tag="P" KeyDown="AxisBox_KeyDown" LostFocus="AxisBox_LostFocus" ToolTip="min – minimum of the power axis [W]"/>
+                        <TextBox x:Name="MaxP" Style="{StaticResource PlainTextBox}" ToolTipService.ShowOnDisabled="True" Width="74" Padding="4,3" Margin="4,0,0,0" HorizontalContentAlignment="Right" VerticalAlignment="Center" Tag="P" KeyDown="AxisBox_KeyDown" LostFocus="AxisBox_LostFocus" ToolTip="max – maximum of the power axis [W]"/>
+                    </StackPanel>
+                    <TextBlock Text="W" FontWeight="Bold" FontSize="14" VerticalAlignment="Center" Margin="5,0,0,0" ToolTip="Power axis [W]"/>
+                </StackPanel>
+            </WrapPanel>
+        </Border>
+
+        <!-- ============================================== plot + series panel -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <DockPanel Grid.Column="0">
+                <!-- smoothing indication above the plot, so it never hides trend data -->
+                <Border x:Name="SmoothBanner" DockPanel.Dock="Top" Background="#FFF59E0B" BorderBrush="#FFB45309" BorderThickness="0,0,0,1"
+                        Padding="10,4" Visibility="Collapsed">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Left" Text="&#xE9E9;" FontFamily="{StaticResource IconFont}" Foreground="Black" FontSize="14"
+                                   VerticalAlignment="Center"/>
+                        <TextBlock x:Name="SmoothBannerText" Foreground="Black" FontWeight="Bold" FontSize="13" Margin="8,0,0,0"
+                                   VerticalAlignment="Center" TextWrapping="Wrap"/>
+                    </DockPanel>
+                </Border>
+                <sp:WpfPlot x:Name="PlotControl"/>
+            </DockPanel>
+            <Border Grid.Column="1" Width="250" Background="{DynamicResource PanelBackground}" BorderBrush="{DynamicResource CardBorder}"
+                    BorderThickness="1,0,0,0" Visibility="{Binding IsChecked, ElementName=SeriesBtn, Converter={StaticResource BoolToVis}}">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Text="Series" Style="{StaticResource SectionTitle}" Margin="10,8,10,4"/>
+                    <!-- trend file -->
+                    <WrapPanel DockPanel.Dock="Top" Margin="6,0,6,2">
+                        <Button x:Name="SaveAsBtn" Style="{StaticResource GhostButton}" Tag="&#xE792;" Content="Save as…" Click="SaveAs_Click"
+                                ToolTip="Save the trend under a name of your choice (recording continues into that file)"/>
+                        <Button Style="{StaticResource GhostButton}" Tag="&#xE81C;" Content="Open…" Click="History_Click"
+                                ToolTip="Open a saved trend in a history window (live trending continues)"/>
+                    </WrapPanel>
+                    <!-- plot layout and ruler -->
+                    <WrapPanel DockPanel.Dock="Top" Margin="6,0,6,4">
+                        <ToggleButton x:Name="SplitBtn" Style="{StaticResource GhostButton}" Tag="&#xE8A9;" Content="Separate V/A/W"
+                                      Checked="Split_Click" Unchecked="Split_Click"
+                                      ToolTip="Show voltage, current and power in three stacked plots with a common time axis (off: one combined plot with three y-axes)"/>
+                        <ToggleButton x:Name="RulerBtn" Style="{StaticResource GhostButton}" Tag="&#xED5E;" Content="Ruler"
+                                      Checked="Ruler_Click" Unchecked="Ruler_Click"
+                                      ToolTip="Vertical ruler: shows the values of all plotted series at the ruler position below each series. Drag the ruler, or click in the plot to move it there."/>
+                    </WrapPanel>
+                    <TextBlock x:Name="CombinedHint" DockPanel.Dock="Top" Style="{StaticResource Secondary}" Margin="10,0,10,6" TextWrapping="Wrap" FontSize="11"
+                               Text="Combined view: V = solid, A = dashed, W = dotted line. Right-click the plot for export options."/>
+                    <TextBlock x:Name="SeparateHint" DockPanel.Dock="Top" Style="{StaticResource Secondary}" Margin="10,0,10,6" TextWrapping="Wrap" FontSize="11"
+                               Visibility="Collapsed" Text="Right-click the plot for export options."/>
+                    <!-- ruler readout header -->
+                    <Border x:Name="RulerHeader" DockPanel.Dock="Top" Margin="8,0,8,6" Padding="8,4" CornerRadius="4" Visibility="Collapsed"
+                            Background="{DynamicResource CardBackground}" BorderBrush="{DynamicResource AccentBrush}" BorderThickness="1">
+                        <StackPanel>
+                            <TextBlock FontWeight="SemiBold">
+                                <Run Text="&#xED5E;" FontFamily="{StaticResource IconFont}"/>
+                                <Run x:Name="RulerTimeRun" Text="Ruler"/>
+                            </TextBlock>
+                            <TextBlock x:Name="RulerNote" Style="{StaticResource Secondary}" FontSize="11" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+                    <ListBox x:Name="SeriesList" BorderThickness="0" Background="Transparent" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="Focusable" Value="False"/>
+                                <Setter Property="Padding" Value="6,3"/>
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel>
+                                    <DockPanel>
+                                        <Rectangle Width="5" Height="16" RadiusX="2" RadiusY="2" Margin="0,0,6,0" Fill="{Binding ColorHex}"/>
+                                        <TextBlock Text="{Binding Label}" TextWrapping="Wrap" FontSize="12" VerticalAlignment="Center"/>
+                                    </DockPanel>
+                                    <StackPanel Orientation="Horizontal" Margin="11,0,0,0">
+                                        <CheckBox Content="V" IsChecked="{Binding ShowVoltage}" MinWidth="0" Margin="0,0,10,0"/>
+                                        <CheckBox Content="A" IsChecked="{Binding ShowCurrent}" MinWidth="0" Margin="0,0,10,0"/>
+                                        <CheckBox Content="W" IsChecked="{Binding ShowPower}" MinWidth="0"/>
+                                    </StackPanel>
+                                    <!-- values at the ruler position -->
+                                    <TextBlock Text="{Binding RulerText}" Margin="11,0,0,2" FontFamily="{StaticResource NumberFont}" FontSize="12"
+                                               FontWeight="SemiBold" TextWrapping="Wrap"
+                                               Visibility="{Binding HasRulerText, Converter={StaticResource BoolToVis}}"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

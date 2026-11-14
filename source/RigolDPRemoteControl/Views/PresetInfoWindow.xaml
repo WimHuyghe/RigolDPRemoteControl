@@ -1,0 +1,174 @@
+<Window x:Class="RigolDPRemoteControl.Views.PresetInfoWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Preset info" Width="1250" Height="820" MinWidth="760" MinHeight="450"
+        WindowStartupLocation="CenterOwner" Icon="/RigolDPRemoteControl;component/Assets/app.ico"
+        Background="{DynamicResource AppBackground}" Foreground="{DynamicResource TextPrimary}">
+    <Window.Resources>
+        <!-- colour swatch button (Tag = colour) -->
+        <Style x:Key="Swatch" TargetType="Button">
+            <Setter Property="Width" Value="22"/>
+            <Setter Property="Height" Value="22"/>
+            <Setter Property="Margin" Value="2,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" CornerRadius="11" BorderThickness="2" BorderBrush="{DynamicResource CardBorder}"
+                                Background="{Binding Tag, RelativeSource={RelativeSource TemplatedParent}}"/>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="Sep" TargetType="Rectangle">
+            <Setter Property="Width" Value="1"/>
+            <Setter Property="Margin" Value="8,4"/>
+            <Setter Property="Fill" Value="{DynamicResource CardBorder}"/>
+        </Style>
+        <!-- plain rich text box: the page itself is the background -->
+        <Style x:Key="PageText" TargetType="RichTextBox">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#FF1B1B1F"/>
+            <Setter Property="CaretBrush" Value="Black"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RichTextBox">
+                        <ScrollViewer x:Name="PART_ContentHost" Focusable="False"
+                                      HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Disabled"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" MinWidth="400"/>
+            <ColumnDefinition Width="6"/>
+            <ColumnDefinition Width="400" MinWidth="220"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- ============================================ toolbar -->
+        <Border Grid.Row="0" Grid.ColumnSpan="3" Background="{DynamicResource HeaderBackground}" BorderBrush="{DynamicResource CardBorder}"
+                BorderThickness="0,0,0,1" Padding="8,5">
+            <WrapPanel VerticalAlignment="Center">
+                <!-- mode -->
+                <ToggleButton x:Name="TypeMode" Style="{StaticResource GhostButton}" Tag="&#xE8D2;" Content="Type" Click="Mode_Click"
+                              IsChecked="True" ToolTip="Type text, paste images (Ctrl+V)"/>
+                <ToggleButton x:Name="DrawMode" Style="{StaticResource GhostButton}" Tag="&#xE76D;" Content="Draw" Click="Mode_Click"
+                              ToolTip="Draw with the mouse or a pen (e.g. a wiring sketch)"/>
+                <ToggleButton x:Name="EraseMode" Style="{StaticResource GhostButton}" Tag="&#xE75C;" Content="Erase" Click="Mode_Click"
+                              ToolTip="Erase drawn strokes"/>
+                <Rectangle Style="{StaticResource Sep}"/>
+
+                <!-- text formatting -->
+                <StackPanel x:Name="TextTools" Orientation="Horizontal">
+                    <Button Style="{StaticResource GhostButton}" Tag="&#xE8DD;" Command="EditingCommands.ToggleBold" CommandTarget="{Binding ElementName=Page}" ToolTip="Bold (Ctrl+B)"/>
+                    <Button Style="{StaticResource GhostButton}" Tag="&#xE8DB;" Command="EditingCommands.ToggleItalic" CommandTarget="{Binding ElementName=Page}" ToolTip="Italic (Ctrl+I)"/>
+                    <Button Style="{StaticResource GhostButton}" Tag="&#xE8DC;" Command="EditingCommands.ToggleUnderline" CommandTarget="{Binding ElementName=Page}" ToolTip="Underline (Ctrl+U)"/>
+                    <Button Style="{StaticResource GhostButton}" Content="H1" FontWeight="Bold" Click="Heading1_Click" ToolTip="Heading"/>
+                    <Button Style="{StaticResource GhostButton}" Content="H2" FontWeight="Bold" Click="Heading2_Click" ToolTip="Sub-heading"/>
+                    <Button Style="{StaticResource GhostButton}" Content="¶" Click="Normal_Click" ToolTip="Normal text"/>
+                    <ComboBox x:Name="SizeCombo" Width="74" Margin="4,0" VerticalAlignment="Center" SelectionChanged="SizeCombo_SelectionChanged"
+                              ToolTip="Font size"/>
+                    <Button Style="{StaticResource GhostButton}" Tag="&#xE8FD;" Command="EditingCommands.ToggleBullets" CommandTarget="{Binding ElementName=Page}" ToolTip="Bullet list"/>
+                    <Button Style="{StaticResource GhostButton}" Content="1." Command="EditingCommands.ToggleNumbering" CommandTarget="{Binding ElementName=Page}" ToolTip="Numbered list"/>
+                    <Rectangle Style="{StaticResource Sep}"/>
+                    <TextBlock Text="Text" Style="{StaticResource Secondary}" Margin="0,0,4,0"/>
+                    <Button Style="{StaticResource Swatch}" Tag="#FF1B1B1F" Click="TextColor_Click" ToolTip="Black"/>
+                    <Button Style="{StaticResource Swatch}" Tag="#FFD32F2F" Click="TextColor_Click" ToolTip="Red"/>
+                    <Button Style="{StaticResource Swatch}" Tag="#FF1565C0" Click="TextColor_Click" ToolTip="Blue"/>
+                    <Button Style="{StaticResource Swatch}" Tag="#FF2E7D32" Click="TextColor_Click" ToolTip="Green"/>
+                    <Button Style="{StaticResource Swatch}" Tag="#FFEF6C00" Click="TextColor_Click" ToolTip="Orange"/>
+                    <Button Style="{StaticResource GhostButton}" Tag="&#xE7E6;" Click="Highlight_Click" ToolTip="Highlight (yellow) – click again to remove"/>
+                    <Rectangle Style="{StaticResource Sep}"/>
+                    <Button Style="{StaticResource GhostButton}" Tag="&#xE8B9;" Content="Image…" Click="InsertImage_Click"
+                            ToolTip="Insert a picture from a file (or paste one with Ctrl+V)"/>
+                    <Button Style="{StaticResource GhostButton}" Tag="&#xE787;" Click="InsertDate_Click" ToolTip="Insert date and time"/>
+                </StackPanel>
+
+                <!-- pen -->
+                <StackPanel x:Name="PenTools" Orientation="Horizontal" Visibility="Collapsed">
+                    <TextBlock Text="Pen" Style="{StaticResource Secondary}" Margin="0,0,4,0"/>
+                    <Button Style="{StaticResource Swatch}" Tag="#FF1B1B1F" Click="PenColor_Click" ToolTip="Black"/>
+                    <Button Style="{StaticResource Swatch}" Tag="#FFD32F2F" Click="PenColor_Click" ToolTip="Red"/>
+                    <Button Style="{StaticResource Swatch}" Tag="#FF1565C0" Click="PenColor_Click" ToolTip="Blue"/>
+                    <Button Style="{StaticResource Swatch}" Tag="#FF2E7D32" Click="PenColor_Click" ToolTip="Green"/>
+                    <Button Style="{StaticResource Swatch}" Tag="#FFEF6C00" Click="PenColor_Click" ToolTip="Orange"/>
+                    <Button Style="{StaticResource Swatch}" Tag="#80FFEB3B" Click="Marker_Click" ToolTip="Yellow marker"/>
+                    <Rectangle Style="{StaticResource Sep}"/>
+                    <ToggleButton x:Name="ThinPen" Style="{StaticResource GhostButton}" Content="Thin" Click="PenWidth_Click" IsChecked="True"/>
+                    <ToggleButton x:Name="ThickPen" Style="{StaticResource GhostButton}" Content="Thick" Click="PenWidth_Click"/>
+                    <Rectangle Style="{StaticResource Sep}"/>
+                    <Button Style="{StaticResource GhostButton}" Tag="&#xE74D;" Content="Clear drawing" Click="ClearInk_Click"/>
+                </StackPanel>
+
+                <Rectangle Style="{StaticResource Sep}"/>
+                <Button Style="{StaticResource GhostButton}" Tag="&#xE74B;" Content="Longer page" Click="ExtendPage_Click"
+                        ToolTip="Add room at the bottom of the page (for drawings)"/>
+            </WrapPanel>
+        </Border>
+
+        <!-- ============================================ the page -->
+        <ScrollViewer x:Name="PageScroller" Grid.Row="1" Grid.Column="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                      Background="{DynamicResource PanelBackground}" Padding="18">
+            <Border Background="White" CornerRadius="3" BorderBrush="#FFD0D0D6" BorderThickness="1">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="10" ShadowDepth="1" Opacity="0.25"/>
+                </Border.Effect>
+                <Grid x:Name="PageGrid" MinHeight="1400">
+                    <!-- text and pictures -->
+                    <RichTextBox x:Name="Page" Style="{StaticResource PageText}" Padding="36,28" AcceptsTab="True"
+                                 FontFamily="Segoe UI" FontSize="14" SpellCheck.IsEnabled="False" VerticalAlignment="Stretch"
+                                 TextChanged="Page_Changed"/>
+                    <!-- drawing layer on top of the text (only receives the mouse in Draw / Erase mode) -->
+                    <InkCanvas x:Name="Ink" Background="Transparent" IsHitTestVisible="False"/>
+                </Grid>
+            </Border>
+        </ScrollViewer>
+
+        <GridSplitter Grid.Row="1" Grid.Column="1" Width="6" HorizontalAlignment="Stretch" Background="{DynamicResource CardBorder}"/>
+
+        <!-- ============================================ configuration summary -->
+        <DockPanel Grid.Row="1" Grid.Column="2" Background="{DynamicResource PanelBackground}">
+            <DockPanel DockPanel.Dock="Top" Margin="10,8,8,4">
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <Button Style="{StaticResource GhostButton}" Tag="&#xE72C;" Click="RefreshSummary_Click" ToolTip="Refresh the summary (reads the supplies again)"/>
+                    <Button Style="{StaticResource GhostButton}" Tag="&#xE70F;" Content="Into page" Click="SummaryToPage_Click"
+                            ToolTip="Copy the summary into the page (as a snapshot you can annotate)"/>
+                </StackPanel>
+                <TextBlock Text="&#xE9D9;" Style="{StaticResource Icon}" Margin="0,0,8,0"/>
+                <TextBlock Text="Configuration summary" Style="{StaticResource SectionTitle}"/>
+            </DockPanel>
+            <TextBlock DockPanel.Dock="Top" Style="{StaticResource Secondary}" FontSize="11" Margin="10,0,10,6" TextWrapping="Wrap"
+                       Text="Generated from the current configuration (supplies, setpoints, OVP/OCP, delays, groups, trend) – the same data that is stored in the preset."/>
+            <TextBox x:Name="SummaryBox" IsReadOnly="True" TextWrapping="Wrap" Margin="8,0,8,8" FontFamily="{StaticResource NumberFont}" FontSize="12"
+                     VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" AcceptsReturn="True"/>
+        </DockPanel>
+
+        <!-- ============================================ footer -->
+        <Border Grid.Row="2" Grid.ColumnSpan="3" Background="{DynamicResource HeaderBackground}" BorderBrush="{DynamicResource CardBorder}"
+                BorderThickness="0,1,0,0" Padding="10,6">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <Button Style="{StaticResource GhostButton}" Tag="&#xE74E;" Content="Save preset…" Click="SavePreset_Click"
+                            ToolTip="Save the configuration together with this page as a preset file"/>
+                    <Button Content="Close" Width="90" Margin="8,0,0,0" Click="Close_Click"/>
+                </StackPanel>
+                <TextBlock Style="{StaticResource Secondary}" TextWrapping="Wrap" VerticalAlignment="Center"
+                           Text="This page is saved inside the preset file together with the configuration (Save preset) and comes back when the preset is loaded. Until then it is kept in the application settings."/>
+            </DockPanel>
+        </Border>
+    </Grid>
+</Window>

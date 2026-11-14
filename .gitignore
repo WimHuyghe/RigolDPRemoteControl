@@ -1,0 +1,21 @@
+# build output
+bin/
+obj/
+.vs/
+*.user
+*.suo
+
+# published binaries are attached to the GitHub release, not committed
+publish/
+
+# Rigol datasheets / manuals (copyright RIGOL – download them from rigol.com)
+Info/
+info/
+
+# local working files
+CLAUDE.md
+.claude/
+eevblog/
+
+# leftover folder of the old project name
+source/RigolDP800Control/
